@@ -18,9 +18,6 @@ const PANEL_WIDTH: usize = 7;
 const GRID_COLOR: u8 = 238;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // let args = NanoArgs::parse();
-    // let file_name = PathBuf::from_str(&args.file)?;
-
     let args = env::args().collect::<Vec<String>>();
     let file_name = PathBuf::from_str(&args[1])?;
 
