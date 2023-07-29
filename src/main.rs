@@ -1,4 +1,5 @@
-use ansi_term::Colour::{Fixed, White};
+use ansi_term::Colour::{Fixed, White, Black};
+use ansi_term::{Style, Color};
 use clap::Parser;
 use console::Term;
 use crossterm::event::{read, Event, KeyCode};
@@ -27,13 +28,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     ))?;
 
     let theme_dir = home_dir.join(".config").join("nano").join("themes");
+    eprintln!("{:?}",theme_dir);
     let theme_set = ThemeSet::load_from_folder(theme_dir)
         .map_err(|_| io::Error::new(ErrorKind::Other, "Could not load themes"))?;
     let theme = &theme_set.themes["Monokai"];
 
     let syntax_set = SyntaxSet::load_defaults_nonewlines();
 
-    print_file(theme, &syntax_set, file_name)?;
+    print_file(theme, &syntax_set,&file_name)?;
 
     Ok(())
 }
@@ -44,9 +46,18 @@ fn print_horizontal_line(
     term_width: usize,
 ) -> io::Result<()> {
     let bar = "─".repeat(term_width - (PANEL_WIDTH + 1));
-    let line = format!("{}{}{}", "─".repeat(PANEL_WIDTH), grid_char, bar);
+    let line = format!(
+        "{}{}{}",
+        "─".repeat(PANEL_WIDTH),
+        grid_char,
+        bar
+    );
 
-    writeln!(handle, "{}", Fixed(GRID_COLOR).paint(line))?;
+    writeln!(
+        handle,
+        "{}",
+        Fixed(GRID_COLOR).paint(line)
+    )?;
 
     Ok(())
 }
@@ -65,14 +76,17 @@ fn print_file<P: AsRef<Path>>(
     let (_, term_width) = term.size();
     let term_width = term_width as usize;
 
+
+    let title_padding = (term_width - filename.as_ref().to_string_lossy().len() - 2) /2;
     print_horizontal_line(&mut handle, '┬', term_width)?;
 
     writeln!(
         handle,
-        "{}{} {}",
-        " ".repeat(PANEL_WIDTH),
-        Fixed(GRID_COLOR).paint("│"),
-        White.bold().paint(filename.as_ref().to_string_lossy())
+        "{}{}{}",
+        " ".repeat(title_padding),
+        Style::new().on(White).bold().fg(Black).bold().paint(filename.as_ref().to_string_lossy()),
+        " ".repeat(title_padding)
+
     )?;
 
     print_horizontal_line(&mut handle, '┼', term_width)?;
