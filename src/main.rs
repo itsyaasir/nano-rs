@@ -16,17 +16,10 @@ use syntect::util::as_24_bit_terminal_escaped;
 
 const PANEL_WIDTH: usize = 7;
 const GRID_COLOR: u8 = 238;
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct NanoArgs {
-    /// The file to open
-    #[clap(short, long)]
-    pub file: String,
-}
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let args = NanoArgs::parse();
-    let file_name = PathBuf::from_str(&args.file)?;
+    let args = env::args().collect::<Vec<String>>();
+    let file_name = PathBuf::from_str(&args[1])?;
 
     let home_dir = env::home_dir().ok_or(io::Error::new(
         ErrorKind::Other,
