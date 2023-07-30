@@ -35,10 +35,10 @@ To open a specific file, pass the file name as an argument:
 
 ## Features
 
-- [] Basic text editing (insertion, deletion, etc.)
-- [] Cursor navigation
-- [] Syntax highlighting for multiple languages
-- [] Reading and writing to files
+- [ ] Basic text editing (insertion, deletion, etc.)
+- [ ] Cursor navigation
+- [ ] Syntax highlighting for multiple languages
+- [ ] Reading and writing to files
 
 ## Contributing
 
