@@ -1,114 +1,118 @@
-use ansi_term::Colour::{Fixed, White, Black};
-use ansi_term::{Style, Color};
-use clap::Parser;
-use console::Term;
-use crossterm::event::{read, Event, KeyCode};
+use crossterm::event::{self, read, Event, KeyCode, KeyEvent, MouseEvent};
+use crossterm::style::{self, Color, ContentStyle, PrintStyledContent, StyledContent};
+use crossterm::style::{style, Stylize};
+use crossterm::terminal::{
+    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+};
 use crossterm::{cursor, terminal};
+use crossterm::{execute, queue};
 use std::error::Error;
-use std::io::Write;
-use std::io::{BufRead, ErrorKind, StdoutLock};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::time::Duration;
 use std::{env, fs, io};
 use syntect::easy::HighlightFile;
-use syntect::highlighting::{Theme, ThemeSet};
+use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
-use syntect::util::as_24_bit_terminal_escaped;
-
-const PANEL_WIDTH: usize = 7;
-const GRID_COLOR: u8 = 238;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = env::args().collect::<Vec<String>>();
     let file_name = PathBuf::from_str(&args[1])?;
-
-    let home_dir = env::home_dir().ok_or(io::Error::new(
-        ErrorKind::Other,
-        "Could not get home directory",
-    ))?;
-
-    let theme_dir = home_dir.join(".config").join("nano").join("themes");
-    eprintln!("{:?}",theme_dir);
-    let theme_set = ThemeSet::load_from_folder(theme_dir)
-        .map_err(|_| io::Error::new(ErrorKind::Other, "Could not load themes"))?;
-    let theme = &theme_set.themes["Monokai"];
-
-    let syntax_set = SyntaxSet::load_defaults_nonewlines();
-
-    print_file(theme, &syntax_set,&file_name)?;
-
+    let mut stdout = io::stdout();
+    run(&mut stdout, &file_name)?;
     Ok(())
 }
 
-fn print_horizontal_line(
-    handle: &mut StdoutLock,
-    grid_char: char,
-    term_width: usize,
-) -> io::Result<()> {
-    let bar = "─".repeat(term_width - (PANEL_WIDTH + 1));
-    let line = format!(
-        "{}{}{}",
-        "─".repeat(PANEL_WIDTH),
-        grid_char,
-        bar
-    );
+fn run<W>(w: &mut W, file_name: &PathBuf) -> Result<(), Box<dyn Error>>
+where
+    W: std::io::Write,
+{
+    execute!(w, EnterAlternateScreen)?;
+    enable_raw_mode()?;
 
-    writeln!(
-        handle,
-        "{}",
-        Fixed(GRID_COLOR).paint(line)
-    )?;
+    let mut should_print_file = true;
+    loop {
+        if should_print_file {
+            let (width, _height) = terminal::size()?;
+            queue!(w, terminal::Clear(terminal::ClearType::All))?;
+            // Print the file name at the center of the first line
+            queue!(
+                w,
+                cursor::MoveTo(
+                    (width / 2) - (file_name.to_str().unwrap().len() as u16 / 2),
+                    0
+                )
+            )?;
+            queue!(
+                w,
+                PrintStyledContent(
+                    style(file_name.to_str().unwrap())
+                        .with(Color::Black)
+                        .on_white()
+                )
+            )?;
+            print_file_contents(w, file_name)?;
+            should_print_file = false;
+        }
 
-    Ok(())
-}
-
-fn print_file<P: AsRef<Path>>(
-    theme: &Theme,
-    syntax_set: &SyntaxSet,
-    filename: P,
-) -> io::Result<()> {
-    let mut highlighter = HighlightFile::new(filename.as_ref(), syntax_set, theme)?;
-
-    let stdout = io::stdout();
-    let mut handle = stdout.lock();
-
-    let term = Term::stdout();
-    let (_, term_width) = term.size();
-    let term_width = term_width as usize;
-
-
-    let title_padding = (term_width - filename.as_ref().to_string_lossy().len() - 2) /2;
-    print_horizontal_line(&mut handle, '┬', term_width)?;
-
-    writeln!(
-        handle,
-        "{}{}{}",
-        " ".repeat(title_padding),
-        Style::new().on(White).bold().fg(Black).bold().paint(filename.as_ref().to_string_lossy()),
-        " ".repeat(title_padding)
-
-    )?;
-
-    print_horizontal_line(&mut handle, '┼', term_width)?;
-
-    for (idx, maybe_line) in highlighter.reader.lines().enumerate() {
-        let line_nr = idx + 1;
-        let line = maybe_line.unwrap_or("<INVALID UTF-8>".into());
-        let regions = highlighter
-            .highlight_lines
-            .highlight_line(&line, syntax_set)
-            .unwrap();
-
-        writeln!(
-            handle,
-            "{} {}  {}",
-            Fixed(244).paint(format!("{:4}", line_nr)),
-            Fixed(GRID_COLOR).paint("│"),
-            as_24_bit_terminal_escaped(&regions, false)
-        )?;
+        if event::poll(Duration::from_millis(500))? {
+            match read()? {
+                Event::Key(KeyEvent {
+                    code: KeyCode::Char('q'),
+                    ..
+                }) => break,
+                Event::Mouse(MouseEvent {
+                    kind, column, row, ..
+                }) => match kind {
+                    event::MouseEventKind::ScrollDown | event::MouseEventKind::ScrollUp => {}
+                    _ => {
+                        queue!(w, cursor::MoveTo(column, row))?;
+                        should_print_file = true;
+                    }
+                },
+                _ => {}
+            }
+        }
+        w.flush()?;
     }
 
-    print_horizontal_line(&mut handle, '┴', term_width)?;
+    disable_raw_mode()?;
+    execute!(w, LeaveAlternateScreen)?;
+    execute!(w, terminal::Clear(terminal::ClearType::All))?;
+    Ok(())
+}
+
+fn print_file_contents<W: std::io::Write>(w: &mut W, file_name: &PathBuf) -> io::Result<()> {
+    let file_contents = fs::read_to_string(file_name)?;
+    let mut line_number = 1;
+    for line in file_contents.lines() {
+        queue!(w, cursor::MoveTo(0, line_number))?;
+        let ss = SyntaxSet::load_defaults_newlines();
+        let ts = ThemeSet::load_defaults();
+        let mut highlighter =
+            HighlightFile::new(file_name, &ss, ts.themes.get("base16-ocean.dark").unwrap())?;
+        let ranges: Vec<(syntect::highlighting::Style, &str)> = highlighter
+            .highlight_lines
+            .highlight_line(line, &ss)
+            .unwrap();
+        for (text_style, text) in ranges {
+            let fg = text_style.foreground;
+            let bg = text_style.background;
+            let fg = Color::Rgb {
+                r: fg.r,
+                g: fg.g,
+                b: fg.b,
+            };
+            let bg = Color::Rgb {
+                r: bg.r,
+                g: bg.g,
+                b: bg.b,
+            };
+            let styled_content = style(text).with(fg).on(bg);
+            queue!(w, PrintStyledContent(styled_content))?;
+        }
+        line_number += 1;
+    }
 
     Ok(())
 }
