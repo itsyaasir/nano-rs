@@ -158,21 +158,6 @@ impl TerminalView {
         loop {
             match event::read()? {
                 event::Event::Key(event) => return Ok(event),
-                event::Event::Mouse(event) => match event.kind {
-                    // TODO:: Implement Scroll Up/Down
-                    MouseEventKind::ScrollDown => {}
-                    MouseEventKind::ScrollUp => {}
-                    MouseEventKind::Down(key) => match key {
-                        crossterm::event::MouseButton::Left => self.set_cursor_position(Position {
-                            x: event.column,
-                            y: event.row,
-                        }),
-                        crossterm::event::MouseButton::Right => {}
-                        crossterm::event::MouseButton::Middle => {}
-                    },
-
-                    _ => {}
-                },
                 _ => continue,
             }
         }

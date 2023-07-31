@@ -85,11 +85,42 @@ impl NanoEditor {
     /// Process the key event captured from the terminal
     pub fn process_key(&mut self) -> NanoResult<()> {
         let event = self.terminal_view.read_key()?;
-        if let KeyCode::Char('q') = event.code {
-            NanoEditor::exit()?
+
+        match event.code {
+            KeyCode::Char('q') => NanoEditor::exit()?,
+            KeyCode::Left | KeyCode::Right | KeyCode::Up | KeyCode::Down => {
+                self.navigate_cursor(event.code)
+            }
+            _ => {}
         }
 
         Ok(())
+    }
+
+    fn navigate_cursor(&mut self, event: KeyCode) {
+        let terminal_height = self.terminal_view.height;
+        let Position { mut x, mut y } = self.terminal_view.cursor;
+        let document_height = self.file.len() as u16;
+        let document_width = self.file.row(y as usize).map_or(0, |content| content.len()) as u16;
+
+        if x > document_width {
+            x = document_width
+        }
+
+        match event {
+            KeyCode::Down => {
+                if y > document_height {
+                    y = document_height
+                }
+                y = y.saturating_add(1)
+            }
+            KeyCode::Up => y = y.saturating_sub(1),
+            KeyCode::Left => x = x.saturating_sub(1),
+            KeyCode::Right => x = x.saturating_add(1),
+            _ => {}
+        };
+
+        self.terminal_view.set_cursor_position((x, y).into())
     }
 
     /// Render the editor
@@ -97,7 +128,6 @@ impl NanoEditor {
     ///
     fn render(&mut self) -> NanoResult<()> {
         TerminalView::hide_cursor()?;
-        self.terminal_view.set_cursor_position(Position::default());
 
         self.render_contents()?;
 
@@ -164,7 +194,7 @@ impl NanoEditor {
 
         let result = syntect::util::as_24_bit_terminal_escaped(&ranges[..], false);
 
-        TerminalView::write(format!("\x1b[38;5;15m{:>4} {result} ", line_number + 1));
+        TerminalView::write(result);
 
         Ok(())
     }

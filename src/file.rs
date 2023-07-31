@@ -44,25 +44,22 @@ impl FileDocument {
     /// Get a row from the file
     /// This will return a row from the file, if it exists.
     /// # Examples
-    /// ```
+    /// ```rust
     /// use nano::FileDocument;
     /// let file = FileDocument::from_file("Cargo.toml").unwrap();
     /// let row = file.row(0);
-    /// ```
-    ///
-    ///
+    ///```
     pub fn row(&self, index: usize) -> Option<&Content> {
         self.content.get(index)
-    }
-
-    /// Check if the file is empty
-    pub fn is_empty(&self) -> bool {
-        self.content.is_empty()
     }
 
     /// Get the file type
     pub fn file_type(&self) -> &str {
         &self.file_type
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.content.len()
     }
 }
 
@@ -80,12 +77,6 @@ mod tests {
     fn test_file_document_row() {
         let file = FileDocument::from_file("Cargo.toml").unwrap();
         assert_eq!(file.row(0), Some(&(Content::from("[package]"))));
-    }
-
-    #[test]
-    fn test_file_document_is_empty() {
-        let file = FileDocument::from_file("Cargo.toml").unwrap();
-        assert!(file.is_empty());
     }
 
     #[test]
