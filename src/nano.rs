@@ -2,6 +2,7 @@ use std::env;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use crossterm::event::KeyCode;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
@@ -74,7 +75,22 @@ impl NanoEditor {
             if let Err(e) = self.render() {
                 NanoEditor::handle_error(e)?;
             }
+
+            if let Err(e) = self.process_key() {
+                NanoEditor::handle_error(e)?;
+            }
         }
+    }
+
+    pub fn process_key(&mut self) -> NanoResult<()> {
+        let event = self.terminal_view.read_key()?;
+        if let KeyCode::Char('q') = event.code {
+            TerminalView::reset()?;
+            TerminalView::flush()?;
+            std::process::exit(0);
+        }
+
+        Ok(())
     }
 
     /// Render the editor

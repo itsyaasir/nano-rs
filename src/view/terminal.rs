@@ -2,7 +2,7 @@ use std::fmt::Display;
 use std::io::{self, Write};
 
 use crossterm::cursor::{self, SetCursorStyle};
-use crossterm::event::{self, EnableMouseCapture};
+use crossterm::event::{self, EnableMouseCapture, KeyEvent, MouseEventKind};
 use crossterm::{terminal as cterminal, Command};
 
 use crate::error::NanoResult;
@@ -14,6 +14,7 @@ pub type TerminalSize = (u16, u16);
 /// Terminal view
 ///
 /// This struct is used to store the terminal view state.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct TerminalView {
     /// The width of the terminal view
@@ -62,9 +63,9 @@ impl TerminalView {
     /// This should be called before starting the program
     ///
     pub fn init() -> NanoResult<()> {
-        cterminal::enable_raw_mode()?;
         TerminalView::execute(cterminal::EnterAlternateScreen)?;
-        TerminalView::set_cursor_style(SetCursorStyle::BlinkingBlock)?;
+        cterminal::enable_raw_mode()?;
+        TerminalView::set_cursor_style(SetCursorStyle::BlinkingBar)?;
         TerminalView::execute(EnableMouseCapture)?;
 
         Ok(())
@@ -75,9 +76,12 @@ impl TerminalView {
     /// It will also disable mouse capture
     /// This should be called before exiting the program
     pub fn reset() -> NanoResult<()> {
-        cterminal::disable_raw_mode()?;
         TerminalView::execute(cterminal::LeaveAlternateScreen)?;
+        TerminalView::set_cursor_style(SetCursorStyle::SteadyBar)?;
         TerminalView::execute(event::DisableMouseCapture)?;
+        TerminalView::show_cursor()?;
+        cterminal::disable_raw_mode()?;
+
         Ok(())
     }
 
@@ -148,5 +152,29 @@ impl TerminalView {
     /// Clears the terminal
     pub fn clear() -> NanoResult<()> {
         TerminalView::execute(cterminal::Clear(cterminal::ClearType::All))
+    }
+
+    /// Read a key from the terminal
+    pub fn read_key(&mut self) -> NanoResult<KeyEvent> {
+        loop {
+            match event::read()? {
+                event::Event::Key(event) => return Ok(event),
+                event::Event::Mouse(event) => match event.kind {
+                    // TODO:: Implement Scroll Up/Down
+                    MouseEventKind::ScrollDown => {}
+                    MouseEventKind::ScrollUp => {}
+                    MouseEventKind::Down(key) => match key {
+                        crossterm::event::MouseButton::Left => self.set_cursor_position(Position {
+                            x: event.column,
+                            y: event.row,
+                        }),
+                        crossterm::event::MouseButton::Right => {}
+                        crossterm::event::MouseButton::Middle => {}
+                    },
+                    _ => {}
+                },
+                _ => continue,
+            }
+        }
     }
 }
