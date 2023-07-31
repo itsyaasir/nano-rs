@@ -4,7 +4,7 @@ pub mod editor;
 pub mod terminal;
 
 pub use editor::NanoEditor;
-pub use terminal::{TerminalSize, TerminalView};
+pub use terminal::TerminalView;
 
 /// Cursor position
 #[derive(Debug, Clone, Copy, Default)]

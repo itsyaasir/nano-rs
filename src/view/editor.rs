@@ -94,7 +94,31 @@ impl NanoEditor {
             _ => {}
         }
 
+        self.scroll_view();
+
         Ok(())
+    }
+
+    /// Scroll the view
+    /// This will scroll the view if the cursor is at the top or bottom of the
+    /// view.
+    pub fn scroll_view(&mut self) {
+        let Position { x, y } = self.terminal_view.cursor;
+        let terminal_height = self.terminal_view.height;
+        let terminal_width = self.terminal_view.width;
+        let mut offset = self.terminal_view.offset;
+
+        if y < offset.y {
+            offset.y = y;
+        } else if y >= offset.y.saturating_add(terminal_height) {
+            offset.y = y.saturating_sub(terminal_height).saturating_add(1);
+        }
+
+        if x < offset.x {
+            offset.x = x;
+        } else if x >= offset.x.saturating_add(terminal_width) {
+            offset.x = x.saturating_sub(terminal_width).saturating_add(1);
+        }
     }
 
     fn navigate_cursor(&mut self, event: KeyCode) {
@@ -103,22 +127,49 @@ impl NanoEditor {
         let document_height = self.file.len() as u16;
         let document_width = self.file.row(y as usize).map_or(0, |content| content.len()) as u16;
 
-        if x > document_width {
-            x = document_width
-        }
-
         match event {
-            KeyCode::Down => {
-                if y > document_height {
-                    y = document_height
-                }
-                y = y.saturating_add(1)
+            KeyCode::Up => {
+                y = y.saturating_sub(1);
             }
-            KeyCode::Up => y = y.saturating_sub(1),
-            KeyCode::Left => x = x.saturating_sub(1),
-            KeyCode::Right => x = x.saturating_add(1),
+            KeyCode::Down => {
+                if y < document_height {
+                    y = y.saturating_add(1);
+                }
+            }
+            KeyCode::Left => match x {
+                0 => {
+                    if y > 0 {
+                        y -= 1;
+                        x = self.file.row(y as usize).map_or(0, |content| content.len()) as u16;
+                    }
+                }
+                _ => {
+                    x -= 1;
+                }
+            },
+            KeyCode::Right => {
+                if x < document_width {
+                    x += 1;
+                } else if y < document_height {
+                    y += 1;
+                    x = 0;
+                }
+            }
+            KeyCode::PageUp => {
+                y = y.saturating_sub(terminal_height);
+            }
+            KeyCode::PageDown => {
+                y = y.saturating_add(terminal_height);
+            }
+            KeyCode::Home => {
+                x = 0;
+            }
+            KeyCode::End => {
+                x = document_width;
+            }
+
             _ => {}
-        };
+        }
 
         self.terminal_view.set_cursor_position((x, y).into())
     }
@@ -150,7 +201,7 @@ impl NanoEditor {
     }
 
     fn render_contents(&self) -> NanoResult<()> {
-        let height = self.terminal_view.size().1;
+        let height = self.terminal_view.height;
 
         for terminal_row in 0..height {
             TerminalView::clear_current_line()?;
@@ -169,7 +220,7 @@ impl NanoEditor {
     }
 
     fn render_content(&self, content: &Content, line_number: u16) -> NanoResult<()> {
-        let width = self.terminal_view.size().0 as usize;
+        let width = self.terminal_view.width as usize;
         let start = self.terminal_view.offset.x as usize;
         let end = self.terminal_view.offset.x as usize + width;
         let text = &content.display_range(start, end);
@@ -201,7 +252,7 @@ impl NanoEditor {
 
     /// Handle error
     fn handle_error(e: NanoError) -> NanoResult<()> {
-        log::error!("{}", e);
+        log::info!("{}", e);
         NanoEditor::exit()?;
 
         Ok(())

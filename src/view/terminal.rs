@@ -2,13 +2,11 @@ use std::fmt::Display;
 use std::io::{self, Write};
 
 use crossterm::cursor::{self, SetCursorStyle};
-use crossterm::event::{self, EnableMouseCapture, KeyEvent, MouseEventKind};
+use crossterm::event::{self, EnableMouseCapture, KeyEvent};
 use crossterm::{terminal as cterminal, Command};
 
 use super::Position;
 use crate::error::NanoResult;
-
-pub type TerminalSize = (u16, u16);
 
 /// Terminal view
 ///
@@ -26,7 +24,6 @@ pub struct TerminalView {
     pub offset: Position,
 
     /// The current cursor position, relative to the terminal view
-    /// It is a tuple of (x, y) - (column, row)
     pub cursor: Position,
 }
 
@@ -49,8 +46,7 @@ impl TerminalView {
         let (width, height) = cterminal::size()?;
         Ok(Self {
             width,
-            height: height - 2, // Subtract 2 for the status bar
-
+            height,
             offset: Position::default(),
             cursor: Position::default(),
         })
@@ -84,11 +80,6 @@ impl TerminalView {
         Ok(())
     }
 
-    /// Get the current terminal view
-    pub fn size(&self) -> TerminalSize {
-        (self.width, self.height)
-    }
-
     /// Set the title of the terminal
     pub fn set_title<S>(title: S) -> NanoResult<()>
     where
@@ -112,16 +103,12 @@ impl TerminalView {
     }
 
     /// Flush the terminal
-    /// This is used to flush the terminal buffer
-    ///
-    /// Basically, this clears the terminal buffer
     pub fn flush() -> NanoResult<()> {
         io::stdout().flush()?;
         Ok(())
     }
 
     /// Execute a crossterm command
-    ///
     pub fn execute<C: Command>(command: C) -> NanoResult<()> {
         crossterm::execute!(std::io::stdout(), command)?;
 
@@ -156,9 +143,11 @@ impl TerminalView {
     /// Read a key from the terminal
     pub fn read_key(&mut self) -> NanoResult<KeyEvent> {
         loop {
-            match event::read()? {
-                event::Event::Key(event) => return Ok(event),
-                _ => continue,
+            if event::poll(std::time::Duration::from_millis(100))? {
+                match event::read()? {
+                    event::Event::Key(event) => return Ok(event),
+                    _ => continue,
+                }
             }
         }
     }
