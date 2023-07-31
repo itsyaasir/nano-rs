@@ -1,0 +1,6 @@
+[appearance]
+theme = "default"
+
+[log]
+level = "info"
+path = "nano.log"

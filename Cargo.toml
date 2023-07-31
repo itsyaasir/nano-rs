@@ -6,7 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ansi_term = "0.12.1"
-console = "0.15.5"
-crossterm = "0.26.1"
-syntect = "5.0.0"
+crossterm = "0.26"
+syntect = "5.0"
+thiserror = "1.0"
+log = "0.4"
+env_logger = "0.10"
+config = "0.13"
+unicode-segmentation = "1.10"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
