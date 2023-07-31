@@ -171,6 +171,7 @@ impl TerminalView {
                         crossterm::event::MouseButton::Right => {}
                         crossterm::event::MouseButton::Middle => {}
                     },
+
                     _ => {}
                 },
                 _ => continue,

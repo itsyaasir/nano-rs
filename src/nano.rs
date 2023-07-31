@@ -82,12 +82,11 @@ impl NanoEditor {
         }
     }
 
+    /// Process the key event captured from the terminal
     pub fn process_key(&mut self) -> NanoResult<()> {
         let event = self.terminal_view.read_key()?;
         if let KeyCode::Char('q') = event.code {
-            TerminalView::reset()?;
-            TerminalView::flush()?;
-            std::process::exit(0);
+            NanoEditor::exit()?
         }
 
         Ok(())
@@ -173,10 +172,16 @@ impl NanoEditor {
     /// Handle error
     fn handle_error(e: NanoError) -> NanoResult<()> {
         log::error!("{}", e);
+        NanoEditor::exit()?;
 
+        Ok(())
+    }
+
+    /// Exit terminal
+    fn exit() -> NanoResult<()> {
+        TerminalView::reset()?;
         TerminalView::clear()?;
         TerminalView::flush()?;
-        TerminalView::reset()?;
         std::process::exit(0);
     }
 }
