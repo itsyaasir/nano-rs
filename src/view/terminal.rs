@@ -3,16 +3,18 @@ use std::io::{self, Write};
 
 use crossterm::cursor::{self, SetCursorStyle};
 use crossterm::event::{self, EnableMouseCapture};
-use crossterm::{style, terminal as cterminal, Command};
+use crossterm::{terminal as cterminal, Command};
 
 use crate::error::NanoResult;
+
+use super::Position;
 
 pub type TerminalSize = (u16, u16);
 
 /// Terminal view
 ///
 /// This struct is used to store the terminal view state.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct TerminalView {
     /// The width of the terminal view
     pub width: u16,
@@ -32,25 +34,12 @@ impl Display for TerminalView {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "(width: {}, height: {}, scroll_offset: {}, cursor_position: {:?})",
+            "(width: {}, height: {}, scroll_offset: {}, cursor_position: {})",
             self.width, self.height, self.offset, self.cursor
         )
     }
 }
 
-/// Cursor position
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Position {
-    /// The x position of the cursor
-    pub x: u16,
-    /// The y position of the cursor
-    pub y: u16,
-}
-impl Display for Position {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "(x: {}, y: {})", self.x, self.y)
-    }
-}
 impl TerminalView {
     /// Create a new terminal view
     ///
@@ -60,7 +49,8 @@ impl TerminalView {
         let (width, height) = cterminal::size()?;
         Ok(Self {
             width,
-            height,
+            height: height - 2, // Subtract 2 for the status bar
+
             offset: Position::default(),
             cursor: Position::default(),
         })
@@ -73,6 +63,7 @@ impl TerminalView {
     ///
     pub fn init() -> NanoResult<()> {
         cterminal::enable_raw_mode()?;
+        TerminalView::execute(cterminal::EnterAlternateScreen)?;
         TerminalView::set_cursor_style(SetCursorStyle::BlinkingBlock)?;
         TerminalView::execute(EnableMouseCapture)?;
 
@@ -150,20 +141,8 @@ impl TerminalView {
     }
 
     /// Write a string to the terminal
-    pub fn write<S: AsRef<str>>(s: S) -> NanoResult<()> {
-        TerminalView::execute(cterminal::Clear(cterminal::ClearType::CurrentLine))?;
-
-        print!("{}", s.as_ref());
-        Ok(())
-    }
-
-    /// Sets the foreground color
-    pub fn set_fg_color(color: syntect::highlighting::Color) -> NanoResult<()> {
-        TerminalView::execute(style::SetForegroundColor(style::Color::Rgb {
-            r: color.r,
-            g: color.g,
-            b: color.b,
-        }))
+    pub fn write<S: AsRef<str>>(s: S) {
+        println!("{}\r", s.as_ref());
     }
 
     /// Clears the terminal

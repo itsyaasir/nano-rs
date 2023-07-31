@@ -9,6 +9,7 @@ use crate::error::NanoResult;
 pub struct FileDocument {
     pub file_name: Option<String>,
     pub content: Vec<Content>,
+    pub file_type: String,
 }
 
 impl FileDocument {
@@ -26,10 +27,17 @@ impl FileDocument {
         let mut file = File::open(file_name.as_ref())?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-        let rows = contents.lines().map(Content::from).collect::<Vec<_>>();
+        let content = contents.lines().map(Content::from).collect::<Vec<_>>();
+        let file_type = file_name
+            .as_ref()
+            .extension()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_default();
+
         Ok(Self {
             file_name: Some(file_name.as_ref().to_string_lossy().to_string()),
-            content: rows,
+            content,
+            file_type,
         })
     }
 
@@ -50,6 +58,11 @@ impl FileDocument {
     /// Check if the file is empty
     pub fn is_empty(&self) -> bool {
         self.content.is_empty()
+    }
+
+    /// Get the file type
+    pub fn file_type(&self) -> &str {
+        &self.file_type
     }
 }
 
@@ -73,5 +86,11 @@ mod tests {
     fn test_file_document_is_empty() {
         let file = FileDocument::from_file("Cargo.toml").unwrap();
         assert!(file.is_empty());
+    }
+
+    #[test]
+    fn test_file_document_file_type() {
+        let file = FileDocument::from_file("Cargo.toml").unwrap();
+        assert_eq!(file.file_type(), "toml");
     }
 }

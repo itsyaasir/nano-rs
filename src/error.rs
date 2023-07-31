@@ -8,8 +8,11 @@ pub enum NanoError {
     #[error("File error: {0}")]
     FileError(String),
 
-    #[error(transparent)]
+    #[error("syntect error: {0}")]
     Syntect(#[from] syntect::Error),
+
+    #[error("generic error: {0}")]
+    Generic(String),
 }
 
 /// A type alias for handling Nano errors

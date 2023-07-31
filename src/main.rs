@@ -17,6 +17,7 @@ fn main() -> NanoResult<()> {
     init_logging();
 
     log::info!("Starting Nano");
+
     NanoEditor::new()?.run()?;
     Ok(())
 }

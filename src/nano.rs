@@ -3,12 +3,14 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use syntect::easy::HighlightLines;
-use syntect::highlighting::Theme;
+use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
 
+use crate::content::Content;
 use crate::error::{NanoError, NanoResult};
 use crate::file::FileDocument;
-use crate::view::terminal::{Position, TerminalView};
+use crate::view::terminal::TerminalView;
+use crate::view::Position;
 
 /// The Nano editor
 ///
@@ -78,13 +80,11 @@ impl NanoEditor {
     /// Render the editor
     /// This will render the editor, including the file, cursor, and status bar.
     ///
-    /// # Errors
-    ///
     fn render(&mut self) -> NanoResult<()> {
         TerminalView::hide_cursor()?;
         self.terminal_view.set_cursor_position(Position::default());
 
-        self.render_rows()?;
+        self.render_contents()?;
 
         self.terminal_view.set_cursor_position(Position {
             x: self
@@ -101,49 +101,55 @@ impl NanoEditor {
 
         TerminalView::show_cursor()?;
         TerminalView::flush()?;
-
         Ok(())
     }
 
-    fn render_rows(&self) -> NanoResult<()> {
+    fn render_contents(&self) -> NanoResult<()> {
         let height = self.terminal_view.size().1;
 
         for terminal_row in 0..height {
             TerminalView::clear_current_line()?;
 
-            if let Some(row) = self
+            if let Some(content) = self
                 .file
                 .row(terminal_row as usize + self.terminal_view.offset.y as usize)
             {
-                self.render_row(&row.text)?;
+                self.render_content(content, terminal_row)?
             } else {
-                TerminalView::write("~")?;
+                TerminalView::write("~\r");
             }
         }
+
         Ok(())
     }
 
-    fn render_row(&self, row: &str) -> NanoResult<()> {
+    fn render_content(&self, content: &Content, line_number: u16) -> NanoResult<()> {
         let width = self.terminal_view.size().0 as usize;
         let start = self.terminal_view.offset.x as usize;
         let end = self.terminal_view.offset.x as usize + width;
-        let row = row.get(start..end).unwrap_or_default();
+        let text = &content.display_range(start, end);
 
         let ss = SyntaxSet::load_defaults_newlines();
-        let syntax = ss.find_syntax_by_extension("rs").unwrap();
+        let syntax =
+            ss.find_syntax_by_extension(self.file.file_type())
+                .ok_or(NanoError::Generic(format!(
+                    "Syntax not found for {}",
+                    self.file.file_type()
+                )))?;
 
-        let theme = Theme::default();
-        let mut h = HighlightLines::new(syntax, &theme);
+        let theme = ThemeSet::load_defaults();
+        let theme = theme
+            .themes
+            .get("base16-ocean.dark")
+            .expect("theme is missing");
 
-        let ranges: Vec<(syntect::highlighting::Style, &str)> =
-            h.highlight_line(row, &SyntaxSet::load_defaults_newlines())?;
+        let mut h = HighlightLines::new(syntax, theme);
 
-        for (style, text) in ranges {
-            let color = style.foreground;
-            let text = text.replace('\t', "    ");
-            TerminalView::set_fg_color(color)?;
-            TerminalView::write(&text)?;
-        }
+        let ranges: Vec<(syntect::highlighting::Style, &str)> = h.highlight_line(text, &ss)?;
+
+        let result = syntect::util::as_24_bit_terminal_escaped(&ranges[..], false);
+
+        TerminalView::write(format!("\x1b[38;5;15m{:>4} {result} ", line_number + 1));
 
         Ok(())
     }
