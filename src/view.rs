@@ -1,7 +1,10 @@
 use std::fmt::Display;
 
+pub mod editor;
 pub mod terminal;
 
+pub use editor::NanoEditor;
+pub use terminal::{TerminalSize, TerminalView};
 /// Cursor position
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Position {

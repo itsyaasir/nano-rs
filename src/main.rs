@@ -1,17 +1,16 @@
 pub mod content;
 mod error;
 mod file;
-mod nano;
 mod view;
+use std::fs::File;
+use std::io::Write;
 
 use chrono::Local;
-
 use env_logger::Target;
 use error::NanoResult;
 use log::LevelFilter;
-use nano::NanoEditor;
-use std::fs::File;
-use std::io::Write;
+
+use crate::view::NanoEditor;
 
 fn main() -> NanoResult<()> {
     init_logging();

@@ -5,9 +5,8 @@ use crossterm::cursor::{self, SetCursorStyle};
 use crossterm::event::{self, EnableMouseCapture, KeyEvent, MouseEventKind};
 use crossterm::{terminal as cterminal, Command};
 
-use crate::error::NanoResult;
-
 use super::Position;
+use crate::error::NanoResult;
 
 pub type TerminalSize = (u16, u16);
 
