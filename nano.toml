@@ -1,5 +1,5 @@
 [appearance]
-theme = "default"
+theme = "Monokai"
 font = "default"
 font_size = 12
 line_numbers = true

@@ -14,3 +14,4 @@ env_logger = "0.10"
 config = "0.13"
 unicode-segmentation = "1.10"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
+toml = "0.7.6"
