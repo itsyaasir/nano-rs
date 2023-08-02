@@ -1,19 +1,17 @@
-use std::{env, fs};
+use std::env;
 use std::path::PathBuf;
 use std::str::FromStr;
 
 use crossterm::event::KeyCode;
 use syntect::easy::HighlightLines;
-use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
-use toml::Value;
 
 use crate::content::Content;
 use crate::error::{NanoError, NanoResult};
 use crate::file::FileDocument;
 use crate::view::terminal::TerminalView;
 use crate::view::Position;
-use syntect::highlighting::Theme;
+use crate::view::configuration::NanoConfig;
 
 /// The Nano editor
 ///
@@ -28,7 +26,7 @@ pub struct NanoEditor {
 
     /// The file being edited/viewed
     file: FileDocument,
-    theme: Theme,
+    themes: NanoConfig,
 }
 
 impl NanoEditor {
@@ -53,35 +51,11 @@ impl NanoEditor {
         let file = FileDocument::from_file(file_name)?;
         let terminal_view = TerminalView::new()?;
 
-
-        let config_path = env::current_dir().unwrap().join("nano.toml");
-        let config_content = fs::read_to_string(&config_path)?;
-
-        // parse the Toml config
-        let config: Value = config_content.parse().unwrap();
-        let appearance = config.get("appearance").and_then(|v| v.as_table());
-
-        let theme_name = appearance
-            .and_then(|appearance| appearance.get("theme"))
-            .and_then(|v| v.as_str())
-            .unwrap_or("base16-ocean.dark");
-
-        let theme_set = ThemeSet::load_defaults();
-        let theme = theme_set
-            .themes
-            .get(theme_name)
-            .ok_or(NanoError::Generic(format!("Theme not found: {}", theme_name)))?;
-        
-        
-        // let font_size = appearance
-        //     .and_then(|appearance| appearance.get("font_size"))
-        //     .and_then(|v| v.as_integer())
-        //     .unwrap_or(12);
-
+         let nano_config = NanoConfig::parse()?;
         Ok(Self {
             terminal_view,
             file,
-            theme: theme.clone(),
+            themes: nano_config,
 
         })
     }
@@ -212,7 +186,7 @@ impl NanoEditor {
                     self.file.file_type()
                 )))?;
 
-        let theme = &self.theme;
+        let theme = &self.themes.theme;
 
         let mut h = HighlightLines::new(syntax, theme);
 
