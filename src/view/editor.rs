@@ -4,6 +4,7 @@ use std::str::FromStr;
 
 use crossterm::event::KeyCode;
 use syntect::easy::HighlightLines;
+use syntect::highlighting::Theme;
 use syntect::parsing::SyntaxSet;
 
 use crate::content::Content;
@@ -26,7 +27,7 @@ pub struct NanoEditor {
 
     /// The file being edited/viewed
     file: FileDocument,
-    themes: NanoConfig,
+    themes: Theme,
 }
 
 impl NanoEditor {
@@ -52,10 +53,11 @@ impl NanoEditor {
         let terminal_view = TerminalView::new()?;
 
          let nano_config = NanoConfig::parse()?;
+         let theme = nano_config.load_themes()?;
         Ok(Self {
             terminal_view,
             file,
-            themes: nano_config,
+            themes: theme,
 
         })
     }
@@ -186,7 +188,7 @@ impl NanoEditor {
                     self.file.file_type()
                 )))?;
 
-        let theme = &self.themes.theme;
+        let theme = &self.themes;
 
         let mut h = HighlightLines::new(syntax, theme);
 
