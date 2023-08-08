@@ -1,5 +1,5 @@
 [appearance]
-theme = "default"
+theme = "base16-mocha.dark"
 font = "default"
 font_size = 12
 line_numbers = true

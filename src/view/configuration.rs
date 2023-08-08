@@ -1,4 +1,5 @@
-use std::fs;
+
+use config::{Config, File};
 use serde_derive::Deserialize;
 use syntect::highlighting::{Theme, ThemeSet};
 use crate::error::NanoError;
@@ -20,9 +21,12 @@ pub struct NanoConfig{
 impl NanoConfig{
     pub fn parse() -> Result<Self, NanoError>{
          //Parse the Nano configuration from a TOML file
-        let filename = "nano.toml";
-        let contents = fs::read_to_string(filename).expect("could not read file");
-        let data: Data = toml::from_str(&contents).unwrap();
+        let config = Config::builder()
+            .add_source(File::with_name("nano"))
+            .build()
+            .unwrap();
+
+        let data : Data = config.try_deserialize().unwrap();
         Ok(data.appearance)
     }
 
@@ -34,5 +38,27 @@ impl NanoConfig{
             .ok_or(NanoError::Generic(format!("Theme not found: {}", self.theme)))?
             .clone();
         Ok(theme)
+    }
+}
+
+#[cfg(test)]
+mod test{
+
+    use super::NanoConfig;
+    #[test]
+    fn parse_config(){
+    let nano_config = NanoConfig::parse().unwrap();
+    assert_eq!(nano_config.theme, "base16-mocha.dark");
+
+    }
+    #[test]
+    fn load(){
+        let config = NanoConfig::parse().unwrap();
+        match config.load_themes() {
+            Ok(theme) => {
+                assert_eq!(theme.name, Some("Base16 Mocha Dark".to_string()))
+            }
+            Err(err) => panic!("failed to load theme: {}", err)
+        }
     }
 }
