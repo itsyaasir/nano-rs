@@ -4,15 +4,14 @@ use std::str::FromStr;
 
 use crossterm::event::KeyCode;
 use syntect::easy::HighlightLines;
-use syntect::highlighting::Theme;
 use syntect::parsing::SyntaxSet;
 
+use crate::config::configuration::NanoConfig;
 use crate::content::Content;
 use crate::error::{NanoError, NanoResult};
 use crate::file::FileDocument;
 use crate::view::terminal::TerminalView;
 use crate::view::Position;
-use crate::view::configuration::NanoConfig;
 
 /// The Nano editor
 ///
@@ -27,7 +26,7 @@ pub struct NanoEditor {
 
     /// The file being edited/viewed
     file: FileDocument,
-    themes: Theme,
+    config: NanoConfig,
 }
 
 impl NanoEditor {
@@ -52,13 +51,11 @@ impl NanoEditor {
         let file = FileDocument::from_file(file_name)?;
         let terminal_view = TerminalView::new()?;
 
-         let nano_config = NanoConfig::parse()?;
-         let theme = nano_config.load_themes()?;
+        let config = NanoConfig::parse()?;
         Ok(Self {
             terminal_view,
             file,
-            themes: theme,
-
+            config,
         })
     }
 
@@ -188,7 +185,7 @@ impl NanoEditor {
                     self.file.file_type()
                 )))?;
 
-        let theme = &self.themes;
+        let theme = &self.config.load_themes().expect("failed to load theme");
 
         let mut h = HighlightLines::new(syntax, theme);
 
@@ -196,7 +193,6 @@ impl NanoEditor {
 
         let result = syntect::util::as_24_bit_terminal_escaped(&ranges[..], false);
 
-        
         TerminalView::write(result);
 
         Ok(())

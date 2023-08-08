@@ -2,7 +2,6 @@ use std::fmt::Display;
 
 pub mod editor;
 pub mod terminal;
-pub mod configuration;
 
 pub use editor::NanoEditor;
 pub use terminal::{TerminalSize, TerminalView};

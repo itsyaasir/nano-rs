@@ -1,3 +1,4 @@
+mod config;
 pub mod content;
 mod error;
 mod file;
