@@ -2,13 +2,11 @@ use std::fmt::Display;
 use std::io::{self, Write};
 
 use crossterm::cursor::{self, SetCursorStyle};
-use crossterm::event::{self, EnableMouseCapture, KeyEvent, MouseEventKind};
+use crossterm::event::{self, EnableMouseCapture, KeyEvent};
 use crossterm::{terminal as cterminal, Command};
 
 use super::Position;
 use crate::error::NanoResult;
-
-pub type TerminalSize = (u16, u16);
 
 /// Terminal view
 ///
@@ -82,11 +80,6 @@ impl TerminalView {
         cterminal::disable_raw_mode()?;
 
         Ok(())
-    }
-
-    /// Get the current terminal view
-    pub fn size(&self) -> TerminalSize {
-        (self.width, self.height)
     }
 
     /// Set the title of the terminal
