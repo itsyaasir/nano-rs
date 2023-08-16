@@ -1,7 +1,7 @@
 [appearance]
 theme = "base16-mocha.dark"
-font = "default"
-font_size = 12
+
+[editor]
 line_numbers = true
 
 [log]

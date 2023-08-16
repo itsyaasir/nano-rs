@@ -6,7 +6,7 @@ use crossterm::event::KeyCode;
 use syntect::easy::HighlightLines;
 use syntect::parsing::SyntaxSet;
 
-use crate::config::configuration::NanoConfig;
+use crate::config::configuration::NanoConfiguration;
 use crate::content::Content;
 use crate::error::{NanoError, NanoResult};
 use crate::file::FileDocument;
@@ -26,7 +26,7 @@ pub struct NanoEditor {
 
     /// The file being edited/viewed
     file: FileDocument,
-    config: NanoConfig,
+    config: NanoConfiguration,
 }
 
 impl NanoEditor {
@@ -51,7 +51,7 @@ impl NanoEditor {
         let file = FileDocument::from_file(file_name)?;
         let terminal_view = TerminalView::new()?;
 
-        let config = NanoConfig::parse()?;
+        let config = NanoConfiguration::parse().expect("failed to parse");
         Ok(Self {
             terminal_view,
             file,
@@ -152,7 +152,7 @@ impl NanoEditor {
         Ok(())
     }
 
-    fn render_contents(&self) -> NanoResult<()> {
+    fn render_contents(& mut self) -> NanoResult<()> {
         let height = self.terminal_view.size().1;
 
         for terminal_row in 0..height {
@@ -165,6 +165,18 @@ impl NanoEditor {
                 self.render_content(content, terminal_row)?
             } else {
                 TerminalView::write("~\r");
+            }
+        }
+
+        if self.config.turn_on_line_numbers().expect("failed to turn on line numbers"){
+            self.terminal_view.set_cursor_position(Position {
+                x: self.terminal_view.size().0 - 10,
+                y: self.terminal_view.cursor.y.saturating_sub(self.terminal_view.offset.y),
+            });
+
+            for i in 0..height{
+                TerminalView::clear_current_line()?;
+                TerminalView::write(format!("{:>3}\r", i + self.terminal_view.offset.y));
             }
         }
 
