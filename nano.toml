@@ -1,6 +1,5 @@
 [appearance]
 theme = "base16-mocha.dark"
-
 [editor]
 line_numbers = true
 

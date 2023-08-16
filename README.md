@@ -1,9 +1,10 @@
 
 ---
-
 # Nano-rs
 
 Nano-rs is a simple text editor written in Rust, inspired by the simplicity and ease-of-use of the Nano editor. It supports basic text editing features such as insertion, deletion, cursor navigation, and more. It also includes syntax highlighting thanks to the `syntect` crate.
+## WIP
+This project is in the early stages, not usable at the current moment.
 
 ## Installation
 

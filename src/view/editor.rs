@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use crossterm::event::KeyCode;
+use crossterm::style::{Color, Stylize};
 use syntect::easy::HighlightLines;
 use syntect::parsing::SyntaxSet;
 
@@ -12,6 +13,8 @@ use crate::error::{NanoError, NanoResult};
 use crate::file::FileDocument;
 use crate::view::terminal::TerminalView;
 use crate::view::Position;
+
+pub const NANO_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// The Nano editor
 ///
@@ -85,6 +88,36 @@ impl NanoEditor {
         }
     }
 
+    pub fn draw_status_bar(&mut self) -> NanoResult<()> {
+        let status_bar_message = format!(
+            "Nano {} - File: {} Modified", // TODO::Change Modified to showcase if the file is dirty or not.
+            NANO_VERSION,
+            self.file
+                .file_name
+                .as_ref()
+                .unwrap_or(&String::from("Untitled")),
+        )
+        .with(Color::Black)
+        .on(Color::White)
+        .to_string();
+
+        // Get the terminal width and the text length
+        let terminal_width = self.terminal_view.width;
+        let text_length = status_bar_message.len();
+
+        // Calculate the number of spaces to add on each side of the text
+        let num_spaces = (terminal_width as usize - text_length) / 2;
+        let centered_text = format!(
+            "{:>width$}",
+            status_bar_message,
+            width = text_length + num_spaces
+        );
+
+        TerminalView::write(centered_text);
+
+        Ok(())
+    }
+
     /// Process the key event captured from the terminal
     pub fn process_key(&mut self) -> NanoResult<()> {
         let event = self.terminal_view.read_key()?;
@@ -101,7 +134,6 @@ impl NanoEditor {
     }
 
     fn navigate_cursor(&mut self, event: KeyCode) {
-        let terminal_height = self.terminal_view.height;
         let Position { mut x, mut y } = self.terminal_view.cursor;
         let document_height = self.file.len() as u16;
         let document_width = self.file.row(y as usize).map_or(0, |content| content.len()) as u16;
@@ -132,6 +164,7 @@ impl NanoEditor {
     fn render(&mut self) -> NanoResult<()> {
         TerminalView::hide_cursor()?;
 
+        self.draw_status_bar()?;
         self.render_contents()?;
 
         self.terminal_view.set_cursor_position(Position {
@@ -153,7 +186,7 @@ impl NanoEditor {
     }
 
     fn render_contents(& mut self) -> NanoResult<()> {
-        let height = self.terminal_view.size().1;
+        let height = self.terminal_view.height;
 
         for terminal_row in 0..height {
             TerminalView::clear_current_line()?;
@@ -183,8 +216,8 @@ impl NanoEditor {
         Ok(())
     }
 
-    fn render_content(&self, content: &Content, line_number: u16) -> NanoResult<()> {
-        let width = self.terminal_view.size().0 as usize;
+    fn render_content(&self, content: &Content, _line_number: u16) -> NanoResult<()> {
+        let width = self.terminal_view.width as usize;
         let start = self.terminal_view.offset.x as usize;
         let end = self.terminal_view.offset.x as usize + width;
         let text = &content.display_range(start, end);
