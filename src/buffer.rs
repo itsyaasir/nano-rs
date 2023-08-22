@@ -2,17 +2,17 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
-use crate::content::Content;
+use crate::content::Data;
 use crate::error::NanoResult;
 
 #[derive(Debug, Clone, Default)]
-pub struct FileDocument {
-    pub file_name: Option<String>,
-    pub content: Vec<Content>,
-    pub file_type: String,
+pub struct Buffer {
+    pub name: Option<String>,
+    pub data: Vec<Data>,
+    pub buffer_type: String,
 }
 
-impl FileDocument {
+impl Buffer {
     /// Open a file and create a new FileDocument
     /// This will open a file and create a new FileDocument from it.
     ///
@@ -27,7 +27,7 @@ impl FileDocument {
         let mut file = File::open(file_name.as_ref())?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-        let content = contents.lines().map(Content::from).collect::<Vec<_>>();
+        let content = contents.lines().map(Data::from).collect::<Vec<_>>();
         let file_type = file_name
             .as_ref()
             .extension()
@@ -35,9 +35,9 @@ impl FileDocument {
             .unwrap_or_default();
 
         Ok(Self {
-            file_name: Some(file_name.as_ref().to_string_lossy().to_string()),
-            content,
-            file_type,
+            name: Some(file_name.as_ref().to_string_lossy().to_string()),
+            data: content,
+            buffer_type: file_type,
         })
     }
 
@@ -49,17 +49,17 @@ impl FileDocument {
     /// let file = FileDocument::from_file("Cargo.toml").unwrap();
     /// let row = file.row(0);
     ///```
-    pub fn row(&self, index: usize) -> Option<&Content> {
-        self.content.get(index)
+    pub fn row(&self, index: usize) -> Option<&Data> {
+        self.data.get(index)
     }
 
     /// Get the file type
     pub fn file_type(&self) -> &str {
-        &self.file_type
+        &self.buffer_type
     }
 
     pub(crate) fn len(&self) -> usize {
-        self.content.len()
+        self.data.len()
     }
 }
 
@@ -69,19 +69,19 @@ mod tests {
 
     #[test]
     fn test_file_document_from_file() {
-        let file = FileDocument::from_file("Cargo.toml").unwrap();
-        assert_eq!(file.file_name, Some(String::from("Cargo.toml")));
+        let file = Buffer::from_file("Cargo.toml").unwrap();
+        assert_eq!(file.name, Some(String::from("Cargo.toml")));
     }
 
     #[test]
     fn test_file_document_row() {
-        let file = FileDocument::from_file("Cargo.toml").unwrap();
-        assert_eq!(file.row(0), Some(&(Content::from("[package]"))));
+        let file = Buffer::from_file("Cargo.toml").unwrap();
+        assert_eq!(file.row(0), Some(&(Data::from("[package]"))));
     }
 
     #[test]
     fn test_file_document_file_type() {
-        let file = FileDocument::from_file("Cargo.toml").unwrap();
+        let file = Buffer::from_file("Cargo.toml").unwrap();
         assert_eq!(file.file_type(), "toml");
     }
 }
