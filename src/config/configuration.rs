@@ -2,16 +2,14 @@ use config::{Config, ConfigError, File};
 use serde_derive::Deserialize;
 use syntect::highlighting::{Theme, ThemeSet};
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct NanoConfiguration {
     appearance: AppearanceConfig,
     editor: EditorConfiguration,
 }
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Deserialize)]
 pub struct AppearanceConfig {
     pub theme: String,
-    // Add other configuration properties here
-    // line_numbers: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -19,23 +17,14 @@ pub struct EditorConfiguration {
     pub line_numbers: bool,
 }
 
-impl Default for NanoConfiguration {
-    fn default() -> Self {
-        Self {
-            appearance: Default::default(),
-            editor: Default::default(),
-        }
-    }
-}
-
 impl NanoConfiguration {
-    pub fn parse() -> Result<Self, ConfigError> {
-        //Parse the Nano configuration from a TOML file
+    pub fn load() -> Self {
+        todo!()
+    }
+    pub fn parse_config() -> Result<Self, ConfigError> {
         let config = Config::builder()
-            .add_source(File::with_name("nano"))
-            .set_default("theme", "Monokai")?
-            .build()
-            .expect("failed to config file");
+            .add_source(File::with_name("nano").required(true))
+            .build()?;
 
         let data: NanoConfiguration = config.try_deserialize()?;
         Ok(data)
@@ -53,9 +42,18 @@ impl NanoConfiguration {
             .clone();
         Ok(theme)
     }
-    pub fn turn_on_line_numbers(&self) -> Result<bool, ConfigError>{
-        let turn_on_off = &self.editor.line_numbers;
-        Ok(turn_on_off.clone())
+}
+
+impl Default for NanoConfiguration {
+    fn default() -> Self {
+        Self {
+            appearance: AppearanceConfig {
+                theme: "Monokai".to_string(),
+            },
+            editor: EditorConfiguration {
+                line_numbers: false,
+            },
+        }
     }
 }
 
@@ -66,12 +64,12 @@ mod test {
 
     #[test]
     fn parse_config() {
-        let nano_config = NanoConfiguration::parse().unwrap();
+        let nano_config = NanoConfiguration::parse_config().unwrap();
         assert_eq!(nano_config.appearance.theme, "base16-mocha.dark");
     }
     #[test]
     fn load() {
-        let config = NanoConfiguration::parse().unwrap();
+        let config = NanoConfiguration::parse_config().unwrap();
         match config.load_themes() {
             Ok(theme) => {
                 assert_eq!(theme.name, Some("Base16 Mocha Dark".to_string()))
@@ -80,8 +78,8 @@ mod test {
         }
     }
     #[test]
-    fn test_turn_on_line_numbers(){
-        let config = NanoConfiguration::parse().unwrap();
+    fn test_turn_on_line_numbers() {
+        let config = NanoConfiguration::parse_config().unwrap();
         let turn_on = config.editor.line_numbers;
         assert_eq!(turn_on, true);
     }

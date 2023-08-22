@@ -5,15 +5,35 @@ use crossterm::cursor::{self, SetCursorStyle};
 use crossterm::event::{self, EnableMouseCapture, KeyEvent};
 use crossterm::{terminal as cterminal, Command};
 
-use super::Position;
 use crate::error::NanoResult;
+
+/// Cursor position
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Position {
+    /// The x position of the cursor
+    pub x: u16,
+    /// The y position of the cursor
+    pub y: u16,
+}
+
+impl std::fmt::Display for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(x: {}, y: {})", self.x, self.y)
+    }
+}
+
+impl From<(u16, u16)> for Position {
+    fn from((x, y): (u16, u16)) -> Self {
+        Position { x, y }
+    }
+}
 
 /// Terminal view
 ///
 /// This struct is used to store the terminal view state.
 #[non_exhaustive]
 #[derive(Debug, Clone)]
-pub struct TerminalView {
+pub struct Terminal {
     /// The width of the terminal view
     pub width: u16,
 
@@ -28,7 +48,7 @@ pub struct TerminalView {
     pub cursor: Position,
 }
 
-impl Display for TerminalView {
+impl Display for Terminal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -38,12 +58,12 @@ impl Display for TerminalView {
     }
 }
 
-impl TerminalView {
+impl Terminal {
     /// Create a new terminal view
     ///
     /// The terminal view is initialized with the current terminal size.
     pub fn new() -> NanoResult<Self> {
-        TerminalView::init()?;
+        Terminal::init()?;
         let (width, height) = cterminal::size()?;
         Ok(Self {
             width,
@@ -60,10 +80,10 @@ impl TerminalView {
     /// This should be called before starting the program
     ///
     pub fn init() -> NanoResult<()> {
-        TerminalView::execute(cterminal::EnterAlternateScreen)?;
+        Terminal::execute(cterminal::EnterAlternateScreen)?;
         cterminal::enable_raw_mode()?;
-        TerminalView::set_cursor_style(SetCursorStyle::BlinkingBar)?;
-        TerminalView::execute(EnableMouseCapture)?;
+        Terminal::set_cursor_style(SetCursorStyle::BlinkingBar)?;
+        Terminal::execute(EnableMouseCapture)?;
 
         Ok(())
     }
@@ -73,10 +93,10 @@ impl TerminalView {
     /// It will also disable mouse capture
     /// This should be called before exiting the program
     pub fn reset() -> NanoResult<()> {
-        TerminalView::execute(cterminal::LeaveAlternateScreen)?;
-        TerminalView::set_cursor_style(SetCursorStyle::SteadyBar)?;
-        TerminalView::execute(event::DisableMouseCapture)?;
-        TerminalView::show_cursor()?;
+        Terminal::execute(cterminal::LeaveAlternateScreen)?;
+        Terminal::set_cursor_style(SetCursorStyle::SteadyBar)?;
+        Terminal::execute(event::DisableMouseCapture)?;
+        Terminal::show_cursor()?;
         cterminal::disable_raw_mode()?;
 
         Ok(())
@@ -87,7 +107,7 @@ impl TerminalView {
     where
         S: AsRef<str> + Display,
     {
-        TerminalView::execute(cterminal::SetTitle(title))
+        Terminal::execute(cterminal::SetTitle(title))
     }
 
     /// Set the cursor position
@@ -96,11 +116,11 @@ impl TerminalView {
 
         let (x, y) = (cursor.x, cursor.y);
 
-        TerminalView::execute(cursor::MoveTo(x, y)).expect("Failed to move cursor");
+        Terminal::execute(cursor::MoveTo(x, y)).expect("Failed to move cursor");
     }
 
     pub fn set_cursor_style(cursor_style: SetCursorStyle) -> NanoResult<()> {
-        TerminalView::execute(cursor_style)?;
+        Terminal::execute(cursor_style)?;
         Ok(())
     }
 
@@ -123,17 +143,17 @@ impl TerminalView {
 
     /// Hide the cursor
     pub fn hide_cursor() -> NanoResult<()> {
-        TerminalView::execute(cursor::Hide)
+        Terminal::execute(cursor::Hide)
     }
 
     /// Show the cursor
     pub fn show_cursor() -> NanoResult<()> {
-        TerminalView::execute(cursor::Show)
+        Terminal::execute(cursor::Show)
     }
 
     /// Clear the current line
     pub fn clear_current_line() -> NanoResult<()> {
-        TerminalView::execute(cterminal::Clear(cterminal::ClearType::CurrentLine))
+        Terminal::execute(cterminal::Clear(cterminal::ClearType::CurrentLine))
     }
 
     /// Write a string to the terminal
@@ -143,7 +163,7 @@ impl TerminalView {
 
     /// Clears the terminal
     pub fn clear() -> NanoResult<()> {
-        TerminalView::execute(cterminal::Clear(cterminal::ClearType::All))
+        Terminal::execute(cterminal::Clear(cterminal::ClearType::All))
     }
 
     /// Read a key from the terminal

@@ -1,24 +1,26 @@
+mod buffer;
 mod config;
 pub mod content;
 mod error;
-mod file;
 mod view;
 use std::fs::File;
 use std::io::Write;
-
+pub mod editor;
+pub mod terminal;
 use chrono::Local;
 use env_logger::Target;
 use error::NanoResult;
 use log::LevelFilter;
 
-use crate::view::NanoEditor;
+use crate::config::configuration::NanoConfiguration;
+use crate::editor::NanoEditor;
 
 fn main() -> NanoResult<()> {
     init_logging();
 
     log::info!("Starting Nano");
-
-    NanoEditor::new()?.run()?;
+    let configuration = NanoConfiguration::load();
+    NanoEditor::new(configuration)?.run()?;
     Ok(())
 }
 
